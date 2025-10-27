@@ -1,7 +1,7 @@
 // Backend API configuration
 // Use production API if deployed, otherwise use localhost for development
 const API_BASE = (window.location.hostname === 'strylith.github.io') 
-  ? 'kina-resort-main-production.up.railway.app'  // REPLACE THIS with your deployed backend URL
+  ? 'https://kina-resort-main-production.up.railway.app/api'
   : 'http://localhost:3000/api';
 
 // Helper function to get auth token

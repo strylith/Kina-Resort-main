@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initializeDatabase } from './config/supabase.js';
 import authRoutes from './routes/auth.js';
 import packagesRoutes from './routes/packages.js';
@@ -13,6 +15,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Get directory paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Middleware
 app.use(cors({
   origin: [
@@ -24,6 +30,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Serve static files from the root directory (for frontend)
+app.use(express.static(path.join(__dirname, '..')));
 
 // Root endpoint
 app.get('/', (req, res) => {
