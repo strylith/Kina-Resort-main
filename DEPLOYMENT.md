@@ -73,16 +73,17 @@ Value: your_railway_token
 1. Go to [railway.app](https://railway.app) and sign in with GitHub
 2. Click "New Project" > "Deploy from GitHub repo"
 3. Select your repository: `Kina-Resort-main`
-4. Configure:
-   - **Root Directory**: `server`
-   - **Start Command**: `npm start`
-5. Add environment variables (copy from GitHub Secrets or your `.env`):
+4. **IMPORTANT - Configure these settings:**
+   - **Root Directory**: Leave blank (use root directory)
+   - **Build Command**: (leave empty, npm install runs automatically)
+   - **Start Command**: Leave empty (will use `npm start` from root `package.json`)
+   - **Port**: Railway will automatically detect PORT from environment variable
+5. Add environment variables in Railway Settings → Variables:
    ```
-   DATABASE_URL=postgresql://postgres:ofLq50jaSg25m2nm@db.djownnqrmeeytnzofuex.supabase.co:5432/postgres
    SUPABASE_URL=https://djownnqrmeeytnzofuex.supabase.co
-   SUPABASE_ANON_KEY=(from your secrets)
-   SUPABASE_SERVICE_ROLE_KEY=(from your secrets)
-   JWT_SECRET=(from your secrets)
+   SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqb3dubnFybWVleXRuem9mdWV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzOTc4MTksImV4cCI6MjA3Njk3MzgxOX0.k4bdG_Tz-Yp_J9_2_gvMi0hjvdUvRKRGnWJsnBP1yRA
+   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqb3dubnFybWVleXRuem9mdWV4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTM5NzgxOSwiZXhwIjoyMDc2OTczODE5fQ.WJwQQ8b9wngmFLAtKYMGZBHOEg3BK22TryYJGwcOLL4
+   JWT_SECRET=Ifh+r0fyodkkSMxDFuqqlQxn/sQOZYnfqTPAWWdzomKzLjbhBmzfakcurO6rHSdm1UAwhuBoo5GaECm+kV1EqA==
    PORT=3000
    NODE_ENV=production
    ```
