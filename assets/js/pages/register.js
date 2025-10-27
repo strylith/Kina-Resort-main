@@ -3,7 +3,7 @@ import { showToast } from '../components/toast.js';
 import { AuthManager } from '../utils/auth.js';
 
 export async function RegisterPage(){
-  window.kinaRegister = (e) => {
+  window.kinaRegister = async (e) => {
     e.preventDefault();
     const form = e.target.closest('form');
     const firstName = form.querySelector('input[name="firstName"]').value.trim();
@@ -38,7 +38,7 @@ export async function RegisterPage(){
     }
     
     // Use the auth manager for registration
-    const result = window.kinaAuth.register({
+    const result = await window.kinaAuth.register({
       firstName,
       lastName,
       email,
