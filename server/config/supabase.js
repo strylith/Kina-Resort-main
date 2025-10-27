@@ -34,57 +34,31 @@ function parseDatabaseUrl(url) {
   }
 }
 
-// Initialize database connection
+// Initialize database connection - Always use Supabase JS client
 export async function initializeDatabase() {
-  const postgresUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  console.log('🔗 Initializing Supabase connection...');
+  connectionType = 'supabase';
   
-  if (postgresUrl) {
-    console.log('🔗 Using direct PostgreSQL connection...');
-    connectionType = 'postgres';
-    
-    const config = parseDatabaseUrl(postgresUrl);
-    if (!config) {
-      throw new Error('Invalid DATABASE_URL format');
-    }
-    
-    dbConnection = new Pool(config);
-    
-    try {
-      const client = await dbConnection.connect();
-      console.log('✅ PostgreSQL connection established');
-      client.release();
-    } catch (error) {
-      console.error('❌ PostgreSQL connection failed:', error.message);
-      throw error;
-    }
-    
-    return dbConnection;
-  } else {
-    // Fall back to Supabase JS
-    console.log('🔗 Using Supabase JS client...');
-    connectionType = 'supabase';
-    
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Missing Supabase environment variables');
-    }
-    
-    dbConnection = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        db: {
-          schema: 'public'
-        }
-      }
-    );
-    
-    console.log('✅ Supabase connection established');
-    return dbConnection;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Missing Supabase environment variables (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)');
   }
+  
+  dbConnection = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      },
+      db: {
+        schema: 'public'
+      }
+    }
+  );
+  
+  console.log('✅ Supabase connection established');
+  return dbConnection;
 }
 
 // Get the database connection
@@ -100,27 +74,69 @@ export function getConnectionType() {
 }
 
 // Export Supabase clients for backward compatibility
-export const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+let supabaseClient = null;
+let supabaseAnonClient = null;
 
-export const supabaseAnon = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+export function getSupabase() {
+  if (!supabaseClient) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing Supabase environment variables');
     }
+    supabaseClient = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
   }
-);
+  return supabaseClient;
+}
 
-export default supabase;
+export function getSupabaseAnon() {
+  if (!supabaseAnonClient) {
+    if (!process.env.SUPABASE_URL) {
+      throw new Error('Missing SUPABASE_URL');
+    }
+    supabaseAnonClient = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+  }
+  return supabaseAnonClient;
+}
+
+// Export as object getters (lazy initialization)
+export const supabase = {
+  get value() { return getSupabase(); }
+};
+
+export const supabaseAnon = {
+  get value() { return getSupabaseAnon(); }
+};
+
+// For routes that call supabase directly, create wrapper
+export function getSupabaseWrapper() {
+  return {
+    ...getSupabase(),
+    auth: {
+      ...getSupabase().auth,
+      admin: {
+        ...getSupabase().auth.admin
+      }
+    }
+  };
+}
+
+// Default export
+export default getSupabase;
 

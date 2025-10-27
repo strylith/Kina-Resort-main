@@ -1,6 +1,8 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { supabase, supabaseAnon } from '../config/supabase.js';
+import { getSupabase, getSupabaseAnon } from '../config/supabase.js';
+const supabase = getSupabase();
+const supabaseAnon = getSupabaseAnon();
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
