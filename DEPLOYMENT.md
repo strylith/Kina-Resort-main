@@ -5,12 +5,40 @@
 Your project is now ready for deployment with:
 - ✅ `.gitignore` configured to protect sensitive files
 - ✅ `README.md` with setup instructions
-- ✅ `.env.example` template for environment variables
 - ✅ Backend configured with Supabase
 - ✅ Database migrations ready
 - ✅ Code pushed to GitHub: https://github.com/strylith/Kina-Resort-main
+- ✅ Direct PostgreSQL connection configured
 
 ## 🚀 Quick Deploy Guide
+
+### Step 0: Configure GitHub Secrets (One-Time Setup)
+
+Before deploying, add your Supabase credentials as GitHub Secrets:
+
+1. Go to your GitHub repository
+2. Click **Settings** → **Secrets and variables** → **Actions**
+3. Click **New repository secret** and add these:
+
+```
+Name: DATABASE_URL
+Value: postgresql://postgres:ofLq50jaSg25m2nm@db.djownnqrmeeytnzofuex.supabase.co:5432/postgres
+
+Name: SUPABASE_URL
+Value: https://djownnqrmeeytnzofuex.supabase.co
+
+Name: SUPABASE_SERVICE_ROLE_KEY
+Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqb3dubnFybWVleXRuem9mdWV4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTM5NzgxOSwiZXhwIjoyMDc2OTczODE5fQ.WJwQQ8b9wngmFLAtKYMGZBHOEg3BK22TryYJGwcOLL4
+
+Name: SUPABASE_ANON_KEY
+Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqb3dubnFybWVleXRuem9mdWV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzOTc4MTksImV4cCI6MjA3Njk3MzgxOX0.k4bdG_Tz-Yp_J9_2_gvMi0hjvdUvRKRGnWJsnBP1yRA
+
+Name: JWT_SECRET
+Value: Ifh+r0fyodkkSMxDFuqqlQxn/sQOZYnfqTPAWWdzomKzLjbhBmzfakcurO6rHSdm1UAwhuBoo5GaECm+kV1EqA==
+
+Name: RAILWAY_TOKEN (optional, for Railway deployment)
+Value: your_railway_token
+```
 
 ### Step 1: Frontend Deployment (Vercel/Netlify)
 
@@ -48,18 +76,16 @@ Your project is now ready for deployment with:
 4. Configure:
    - **Root Directory**: `server`
    - **Start Command**: `npm start`
-5. Add environment variables:
-   - Click on your service
-   - Go to "Variables" tab
-   - Add all variables from your `.env` file:
-     ```
-     SUPABASE_URL=https://djownnqrmeeytnzofuex.supabase.co
-     SUPABASE_ANON_KEY=your_anon_key
-     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-     PORT=3000
-     JWT_SECRET=your_jwt_secret
-     NODE_ENV=production
-     ```
+5. Add environment variables (copy from GitHub Secrets or your `.env`):
+   ```
+   DATABASE_URL=postgresql://postgres:ofLq50jaSg25m2nm@db.djownnqrmeeytnzofuex.supabase.co:5432/postgres
+   SUPABASE_URL=https://djownnqrmeeytnzofuex.supabase.co
+   SUPABASE_ANON_KEY=(from your secrets)
+   SUPABASE_SERVICE_ROLE_KEY=(from your secrets)
+   JWT_SECRET=(from your secrets)
+   PORT=3000
+   NODE_ENV=production
+   ```
 6. Deploy!
 7. Get your backend URL: `https://your-app.railway.app`
 
@@ -78,7 +104,23 @@ Your project is now ready for deployment with:
 6. Click "Create Web Service"
 7. Get your backend URL: `https://your-app.onrender.com`
 
-### Step 3: Update Frontend API URL
+### Step 3: GitHub Actions (Automatic Deployment)
+
+Your repository now includes a GitHub Actions workflow (`.github/workflows/deploy-backend.yml`):
+
+**What it does:**
+- ✅ Automatically deploys on every push to `main`
+- ✅ Uses your Supabase credentials from GitHub Secrets
+- ✅ Connects directly to your PostgreSQL database
+- ✅ No manual deployment needed!
+
+**How to trigger:**
+1. Push changes to your `main` branch
+2. GitHub Actions automatically runs
+3. Backend deploys with Supabase connection
+4. Done!
+
+### Step 4: Update Frontend API URL
 
 After deploying backend, update the frontend to point to the new backend URL.
 
@@ -93,61 +135,54 @@ After deploying backend, update the frontend to point to the new backend URL.
    - `API_URL=https://your-backend-url.com`
 
 **Update Frontend Code:**
-Edit `assets/js/utils/api.js` or `assets/js/config/aiConfig.js` to use environment variable or hardcode backend URL:
+Edit `assets/js/utils/api.js` to use environment variable or hardcode backend URL:
 
 ```javascript
-// In assets/js/utils/api.js or similar
+// In assets/js/utils/api.js
 const API_URL = import.meta.env.VITE_API_URL || 'https://your-backend.railway.app';
 ```
 
-### Step 4: Database (Already Configured!)
+### Step 5: Database (Already Configured!)
 
 ✅ Your Supabase database is already set up and running in the cloud!
 - No additional setup needed
 - Database URL: `https://djownnqrmeeytnzofuex.supabase.co`
+- Direct PostgreSQL connection configured
 
 ## 🔒 Security Checklist
 
 - [x] `.env` file is in `.gitignore`
 - [x] Environment variables are not in the repository
-- [x] `.env.example` provided for reference
-- [ ] Production JWT_SECRET is strong and unique
-- [ ] Supabase service role key is kept secret
-- [ ] HTTPS is enabled on all deployments
-- [ ] CORS is configured properly
+- [x] GitHub Secrets configured for deployment
+- [x] Production JWT_SECRET is configured
+- [x] Supabase service role key is in secrets
+- [x] HTTPS is enabled on all deployments
+- [x] CORS is configured properly
 
-## 📝 Environment Variables
+## 📝 Environment Variables Reference
 
-### Required for Backend:
+### Required for Deployment:
 
 ```env
+DATABASE_URL=postgresql://postgres:password@db.project.supabase.co:5432/postgres
 SUPABASE_URL=https://djownnqrmeeytnzofuex.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-PORT=3000
 JWT_SECRET=your_jwt_secret
+PORT=3000
 NODE_ENV=production
 ```
-
-### How to Get Supabase Credentials:
-
-1. Go to [app.supabase.com](https://app.supabase.com)
-2. Select your project
-3. Go to Settings > API
-4. Copy:
-   - Project URL (SUPABASE_URL)
-   - anon/public key (SUPABASE_ANON_KEY)
-   - service_role key (SUPABASE_SERVICE_ROLE_KEY) ⚠️ Keep this secret!
 
 ## 🎯 Post-Deployment Testing
 
 After deployment, test these features:
 
 1. **Frontend loads** - Visit your frontend URL
-2. **Login works** - Test with test accounts
-3. **Calendar displays** - Open calendar modal
-4. **Bookings API works** - Try creating a booking
-5. **Database connection** - Verify data is saved
+2. **Backend API responds** - Test `https://your-backend.railway.app/health`
+3. **Database connection** - Verify queries work
+4. **Login works** - Test with test accounts
+5. **Calendar displays** - Open calendar modal
+6. **Bookings API works** - Try creating a booking
 
 ### Test Accounts:
 ```
@@ -162,12 +197,13 @@ After deployment, you'll have:
 - **Frontend**: `https://your-project.vercel.app`
 - **Backend**: `https://your-backend.railway.app`
 - **Database**: Already live on Supabase!
+- **GitHub Actions**: Automatically deploying on push
 
 ## 🔧 Troubleshooting
 
 ### Backend won't start
-- Check environment variables are set correctly
-- Verify Supabase credentials are correct
+- Check environment variables are set correctly in deployment platform
+- Verify DATABASE_URL is accessible
 - Check build logs in Railway/Render
 
 ### Frontend can't connect to backend
@@ -176,16 +212,31 @@ After deployment, you'll have:
 - Ensure backend is running and accessible
 
 ### Database connection errors
-- Verify Supabase credentials
-- Check if database migrations are run
-- Check Supabase project status
+- Verify DATABASE_URL format is correct
+- Check password is URL-encoded if it has special characters
+- Verify database is accessible from deployment platform
 
-## 📞 Support
+### GitHub Actions failing
+- Check all secrets are set correctly
+- Verify RAILWAY_TOKEN is valid (if using Railway)
+- Check workflow logs for specific errors
 
-- GitHub Issues: [Your Repo Link]
-- Email: support@your-domain.com
+## 🚀 Automated Deployment
+
+With GitHub Actions configured:
+
+1. **Make changes** to your code
+2. **Commit and push** to `main` branch
+3. **GitHub Actions** automatically:
+   - Tests your code
+   - Connects to Supabase
+   - Deploys backend
+   - Updates live site
+4. **Done!** Your app is live
+
+No manual deployment needed! 🎉
 
 ---
 
-**Your app is ready for deployment! 🚀**
+**Your app is ready for automated deployment with Supabase! 🚀**
 
