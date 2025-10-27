@@ -30,61 +30,6 @@ export async function AuthPage(){
     }
   };
 
-  window.kinaRegister = async (e) => {
-    e.preventDefault();
-    const form = e.target.closest('form');
-    const firstName = form.querySelector('input[name="firstName"]').value.trim();
-    const lastName = form.querySelector('input[name="lastName"]').value.trim();
-    const email = form.querySelector('input[name="email"]').value.trim();
-    const password = form.querySelector('input[name="password"]').value.trim();
-    const confirmPassword = form.querySelector('input[name="confirmPassword"]').value.trim();
-    const termsAgreed = form.querySelector('input[name="termsAgreed"]').checked;
-    const privacyAgreed = form.querySelector('input[name="privacyAgreed"]').checked;
-    const cookiesAgreed = form.querySelector('input[name="cookiesAgreed"]').checked;
-    const personalInfoAgreed = form.querySelector('input[name="personalInfoAgreed"]').checked;
-    
-    // Validation
-    if(!firstName || !lastName || !email || !password || !confirmPassword){
-      showToast('All fields are required','error'); 
-      return; 
-    }
-    
-    if(password !== confirmPassword){
-      showToast('Passwords do not match','error'); 
-      return; 
-    }
-    
-    if(password.length < 8){
-      showToast('Password must be at least 8 characters','error'); 
-      return; 
-    }
-    
-    if(!termsAgreed || !privacyAgreed || !cookiesAgreed || !personalInfoAgreed){
-      showToast('Please agree to all terms and conditions','error'); 
-      return; 
-    }
-    
-    // Use the auth manager for registration
-    const result = await window.kinaAuth.register({
-      firstName,
-      lastName,
-      email,
-      password
-    });
-    
-    if (result.success) {
-      showToast('Registration successful! Welcome to Kina Resort, ' + result.user.firstName + '!', 'success');
-      window.kinaCloseModal();
-      // Redirect to return URL or homepage
-      setTimeout(() => {
-        const returnParam = new URLSearchParams(location.hash.split('?')[1] || '').get('return');
-        location.hash = returnParam || '#/';
-      }, 1000);
-    } else {
-      showToast(result.message, 'error');
-    }
-  };
-
   window.kinaShowRegister = () => {
     // Remove any existing modals
     document.querySelectorAll('.auth-modal').forEach(modal => modal.remove());
