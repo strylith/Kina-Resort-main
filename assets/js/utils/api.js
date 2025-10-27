@@ -1,12 +1,17 @@
 // Backend API configuration
 // Use production API if deployed, otherwise use localhost for development
-const API_BASE = (window.location.hostname === 'strylith.github.io') 
+// Check if we're NOT on localhost (production environment)
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const API_BASE = isProduction 
   ? 'https://kina-resort-main-production.up.railway.app/api'
   : 'http://localhost:3000/api';
 
 // Log which API is being used
-console.log('🌐 API_BASE:', API_BASE);
-console.log('📍 Current hostname:', window.location.hostname);
+console.log('🌐 API Configuration:');
+console.log('  Location:', window.location.href);
+console.log('  Hostname:', window.location.hostname);
+console.log('  Is Production:', isProduction);
+console.log('  API_BASE:', API_BASE);
 
 // Helper function to get auth token
 function getAuthToken() {
