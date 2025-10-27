@@ -34,3 +34,6 @@ Write-Host "`nStarting server on port 3000..." -ForegroundColor Cyan
 Write-Host "Press Ctrl+C to stop the server`n" -ForegroundColor Yellow
 node server.js
 
+
+
+

@@ -28,3 +28,6 @@ ADD COLUMN IF NOT EXISTS selected_cottages JSONB;
 COMMENT ON COLUMN public.bookings.per_room_guests IS 'Array of {roomId, guestName, adults, children}';
 COMMENT ON COLUMN public.bookings.selected_cottages IS 'Array of selected cottage IDs';
 
+
+
+

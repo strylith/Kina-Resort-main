@@ -69,3 +69,6 @@ AND b.status IN ('pending', 'confirmed')
 AND (b.check_in <= '2025-10-31' AND b.check_out >= '2025-10-01')
 ORDER BY bi.item_id;
 
+
+
+

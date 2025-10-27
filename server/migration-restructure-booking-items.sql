@@ -114,3 +114,6 @@ COMMENT ON COLUMN public.booking_items.children IS 'Number of children for this 
 -- ALTER TABLE public.bookings DROP COLUMN IF EXISTS per_room_guests;
 -- ALTER TABLE public.bookings DROP COLUMN IF EXISTS selected_cottages;
 
+
+
+

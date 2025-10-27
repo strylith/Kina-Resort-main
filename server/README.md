@@ -106,3 +106,6 @@ const API_BASE = 'http://localhost:3000/api';
 
 **CORS errors:**
 - Update CORS origins in `server.js` to match your frontend URL
+
+
+

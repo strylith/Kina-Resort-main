@@ -55,3 +55,4 @@ coverage/
 
 # Supabase local files (if using local development)
 .supabase/
+

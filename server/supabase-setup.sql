@@ -128,3 +128,6 @@ INSERT INTO public.packages (title, category, price, capacity, description, imag
 ('Grand Function Hall', 'function-halls', '₱15,000/day', 200, 'Spacious hall perfect for weddings, conferences, and large events. Includes tables, chairs, sound system, and air conditioning.', 'images/Function Hall.JPG'),
 ('Intimate Function Hall', 'function-halls', '₱10,000/day', 100, 'Cozy hall ideal for birthday parties, meetings, and gatherings. Perfect for smaller celebrations with modern amenities.', 'images/Function Hall.JPG')
 ON CONFLICT DO NOTHING;
+
+
+

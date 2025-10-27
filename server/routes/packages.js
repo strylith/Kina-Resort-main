@@ -135,3 +135,6 @@ router.get('/:id/availability', async (req, res) => {
 });
 
 export default router;
+
+
+

@@ -7,3 +7,6 @@ ALTER COLUMN guests TYPE jsonb USING guests::text::jsonb;
 -- Update the comment to reflect the new structure
 COMMENT ON COLUMN bookings.guests IS 'Guest information stored as JSON: {"adults": number, "children": number}';
 
+
+
+

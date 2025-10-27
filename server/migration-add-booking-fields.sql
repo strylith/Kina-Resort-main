@@ -28,3 +28,6 @@ FROM information_schema.columns
 WHERE table_name = 'bookings' 
 ORDER BY ordinal_position;
 
+
+
+
