@@ -1,5 +1,14 @@
 // Simple authentication system for testing
 import { setAuthState } from './state.js';
+import { login as apiLogin, register as apiRegister } from './api.js';
+
+// Helper to get the API base URL dynamically
+function getAPIBase() {
+  const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  return isProduction 
+    ? 'https://kina-resort-main-production.up.railway.app/api'
+    : 'http://localhost:3000/api';
+}
 
 class AuthManager {
   constructor() {
@@ -59,7 +68,10 @@ class AuthManager {
 
   async login(email, password) {
     try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
+      const apiBase = getAPIBase();
+      console.log('🔐 Auth login to:', apiBase);
+      
+      const response = await fetch(`${apiBase}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -94,7 +106,10 @@ class AuthManager {
 
   async register(userData) {
     try {
-      const response = await fetch('http://localhost:3000/api/auth/register', {
+      const apiBase = getAPIBase();
+      console.log('🔐 Auth register to:', apiBase);
+      
+      const response = await fetch(`${apiBase}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
