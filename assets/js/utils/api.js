@@ -4,6 +4,10 @@ const API_BASE = (window.location.hostname === 'strylith.github.io')
   ? 'https://kina-resort-main-production.up.railway.app/api'
   : 'http://localhost:3000/api';
 
+// Log which API is being used
+console.log('🌐 API_BASE:', API_BASE);
+console.log('📍 Current hostname:', window.location.hostname);
+
 // Helper function to get auth token
 function getAuthToken() {
   return localStorage.getItem('auth_token');
