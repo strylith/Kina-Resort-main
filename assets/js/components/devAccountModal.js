@@ -116,7 +116,9 @@ window.devSelectAccount = async function(accountId) {
   
   try {
     // Try to login with existing account
-    const response = await fetch('http://localhost:3000/api/auth/login', {
+      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      const apiBase = isProduction ? 'https://kina-resort-main-production.up.railway.app/api' : 'http://localhost:3000/api';
+      const response = await fetch(`${apiBase}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -159,7 +161,9 @@ window.devSelectAccount = async function(accountId) {
 // Register a new account
 async function devRegisterAccount(account) {
   try {
-    const response = await fetch('http://localhost:3000/api/auth/register', {
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const apiBase = isProduction ? 'https://kina-resort-main-production.up.railway.app/api' : 'http://localhost:3000/api';
+    const response = await fetch(`${apiBase}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

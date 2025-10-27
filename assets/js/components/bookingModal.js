@@ -1308,7 +1308,9 @@ window.toggleTermsExpansion = function() {
 // Fetch and display terms from Supabase
 async function loadTermsAndConditions() {
   try {
-    const response = await fetch('http://localhost:3000/api/settings/booking_terms');
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const apiBase = isProduction ? 'https://kina-resort-main-production.up.railway.app/api' : 'http://localhost:3000/api';
+    const response = await fetch(`${apiBase}/settings/booking_terms`);
     const data = await response.json();
     
     if (data.success && data.data) {
@@ -1572,8 +1574,10 @@ async function saveBookingToSupabase(bookingData) {
     
     console.log('Booking payload:', JSON.stringify(bookingPayload, null, 2));
 
-    console.log('Sending request to http://localhost:3000/api/bookings');
-    const response = await fetch('http://localhost:3000/api/bookings', {
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const apiBase = isProduction ? 'https://kina-resort-main-production.up.railway.app/api' : 'http://localhost:3000/api';
+    console.log('Sending request to', `${apiBase}/bookings`);
+    const response = await fetch(`${apiBase}/bookings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
