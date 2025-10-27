@@ -1,5 +1,8 @@
 // Backend API configuration
-const API_BASE = 'http://localhost:3000/api';
+// Use production API if deployed, otherwise use localhost for development
+const API_BASE = (window.location.hostname === 'strylith.github.io') 
+  ? 'https://YOUR-BACKEND-URL.railway.app/api'  // REPLACE THIS with your deployed backend URL
+  : 'http://localhost:3000/api';
 
 // Helper function to get auth token
 function getAuthToken() {
