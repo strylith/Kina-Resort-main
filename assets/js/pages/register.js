@@ -92,8 +92,8 @@ export async function RegisterPage(){
   };
 
   return `
-  <div class="auth-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;">
-    <div class="auth-modal-content" style="background: white; border-radius: 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.25); position: relative;">
+  <div class="auth-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; overflow-y: auto;">
+    <div class="auth-modal-content" style="background: white; border-radius: 20px; max-width: 500px; width: 100%; max-height: calc(100vh - 40px); overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.25); position: relative; -webkit-overflow-scrolling: touch;">
       <!-- Close button -->
       <button onclick="kinaCloseModal()" style="position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; background: transparent; border: none; color: white; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; opacity: 0.8; font-weight: 900; font-size: 24px; z-index: 1;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'; this.style.opacity='1'" onmouseout="this.style.backgroundColor='transparent'; this.style.opacity='0.8'">×</button>
       
@@ -219,9 +219,12 @@ export async function RegisterPage(){
     @media (max-width: 480px) {
       .auth-modal {
         padding: 10px;
+        overflow-y: auto !important;
       }
       .auth-modal-content {
-        max-height: 95vh;
+        max-height: calc(100vh - 20px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
       }
       .auth-header {
         padding: 32px 24px 24px !important;
