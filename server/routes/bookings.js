@@ -1,6 +1,5 @@
 import express from 'express';
-import { getSupabase } from '../config/supabase.js';
-const supabase = getSupabase();
+import { db } from '../db/databaseClient.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -28,7 +27,7 @@ router.get('/availability/:packageId', async (req, res) => {
     
     // Query booking_items with joined booking data
     // This is the single source of truth for all booked items
-    const { data: bookedItems, error } = await supabase
+    const { data: bookedItems, error } = await db
       .from('booking_items')
       .select(`
         id,

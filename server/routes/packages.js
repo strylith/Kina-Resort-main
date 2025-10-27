@@ -1,6 +1,5 @@
 import express from 'express';
-import { getSupabase } from '../config/supabase.js';
-const supabase = getSupabase();
+import { db } from '../db/databaseClient.js';
 
 const router = express.Router();
 
@@ -8,7 +7,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const { category } = req.query;
-    let query = supabase.from('packages').select('*');
+    let query = db.from('packages').select('*');
 
     // Filter by category if provided
     if (category) {
@@ -39,7 +38,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('packages')
       .select('*')
       .eq('id', id)

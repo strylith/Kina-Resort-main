@@ -94,11 +94,71 @@ const API_BASE = 'http://localhost:3000/api';
 - RLS policies in Supabase provide additional security
 - CORS is configured to allow specific origins only
 
+## Testing
+
+The backend now supports mock database testing for offline development and CI/CD.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### Switching Between Mock and Real Database
+
+**Use Mock Database (No Supabase required):**
+```bash
+USE_MOCK_DB=true npm start
+```
+
+**Use Real Supabase:**
+```bash
+npm start  # or don't set USE_MOCK_DB
+```
+
+### Test Configuration
+
+Tests automatically use mock database when `NODE_ENV=test`. The mock database:
+- Stores data in memory (resets between tests)
+- Supports same API as Supabase
+- No external dependencies required
+
+### Writing Tests
+
+Example test structure:
+```javascript
+import { mockClient } from '../db/databaseClient.js';
+
+describe('My Route', () => {
+  beforeEach(() => {
+    // Database resets automatically
+  });
+  
+  it('should do something', async () => {
+    // Seed test data
+    mockClient.seed('users', [{ id: 1, name: 'Test' }]);
+    
+    // Test your route
+    const response = await request(app).get('/api/endpoint');
+    
+    expect(response.status).toBe(200);
+  });
+});
+```
+
 ## Troubleshooting
 
 **Database connection errors:**
 - Check your Supabase URL and Service Role Key in `.env`
 - Verify tables were created successfully in Supabase
+- Use mock database for local testing: `USE_MOCK_DB=true`
 
 **Authentication errors:**
 - Ensure JWT_SECRET is set in `.env`
@@ -106,6 +166,7 @@ const API_BASE = 'http://localhost:3000/api';
 
 **CORS errors:**
 - Update CORS origins in `server.js` to match your frontend URL
+
 
 
 

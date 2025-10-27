@@ -1,6 +1,5 @@
 import express from 'express';
-import { getSupabase } from '../config/supabase.js';
-const supabase = getSupabase();
+import { db } from '../db/databaseClient.js';
 
 const router = express.Router();
 
@@ -9,7 +8,7 @@ router.get('/:key', async (req, res) => {
   try {
     const { key } = req.params;
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('admin_settings')
       .select('value')
       .eq('key', key)

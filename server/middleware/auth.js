@@ -1,14 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { getSupabase } from '../config/supabase.js';
-
-// Lazy load supabase to avoid initialization errors at import time
-let supabaseInstance = null;
-function getSupabaseClient() {
-  if (!supabaseInstance) {
-    supabaseInstance = getSupabase();
-  }
-  return supabaseInstance;
-}
+import { dbAuth } from '../db/databaseClient.js';
 
 export const authenticateToken = async (req, res, next) => {
   try {
@@ -25,9 +16,8 @@ export const authenticateToken = async (req, res, next) => {
     // Verify JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Get user from Supabase to ensure they still exist
-    const supabase = getSupabaseClient();
-    const { data: user, error } = await supabase.auth.admin.getUserById(decoded.userId);
+    // Get user from Auth to ensure they still exist
+    const { data: user, error } = await dbAuth.admin.getUserById(decoded.userId);
     
     if (error || !user) {
       return res.status(401).json({ 

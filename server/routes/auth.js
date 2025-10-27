@@ -1,8 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { getSupabase, getSupabaseAnon } from '../config/supabase.js';
-const supabase = getSupabase();
-const supabaseAnon = getSupabaseAnon();
+import { db, dbAuth } from '../db/databaseClient.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -24,8 +22,8 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Create user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Create user in Auth
+    const { data: authData, error: authError } = await dbAuth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -43,7 +41,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Create user profile in users table
-    const { error: profileError } = await supabase
+    const { error: profileError } = await db
       .from('users')
       .insert({
         id: authData.user.id,
@@ -57,7 +55,7 @@ router.post('/register', async (req, res) => {
 
     if (profileError) {
       // User created but profile failed - delete auth user
-      await supabase.auth.admin.deleteUser(authData.user.id);
+      await dbAuth.admin.deleteUser(authData.user.id);
       return res.status(500).json({ 
         success: false, 
         error: 'Failed to create user profile' 
@@ -99,7 +97,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Verify password using anon client
-    const { data: signInData, error: signInError } = await supabaseAnon.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await dbAuth.signInWithPassword({
       email,
       password
     });
@@ -112,7 +110,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await db
       .from('users')
       .select('*')
       .eq('id', signInData.user.id)
@@ -181,7 +179,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     // Send password reset email
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await dbAuth.resetPasswordForEmail(email, {
       redirectTo: 'http://localhost:5500/#/auth'
     });
 
@@ -210,7 +208,7 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.user.id;
 
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await db
       .from('users')
       .select('*')
       .eq('id', userId)

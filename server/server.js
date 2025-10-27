@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initializeDatabase } from './config/supabase.js';
+import { db } from './db/databaseClient.js';
 import authRoutes from './routes/auth.js';
 import packagesRoutes from './routes/packages.js';
 import bookingsRoutes from './routes/bookings.js';
@@ -95,8 +95,9 @@ app.use((err, req, res, next) => {
 // Initialize database and start server
 async function startServer() {
   try {
-    // Initialize database connection
-    await initializeDatabase();
+    // Database client is initialized via db/databaseClient.js
+    // It will use mock DB if USE_MOCK_DB=true or NODE_ENV=test
+    console.log('✅ Database client initialized');
     
     // Start server
     app.listen(PORT, () => {

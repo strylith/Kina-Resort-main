@@ -1,6 +1,5 @@
 import express from 'express';
-import { getSupabase } from '../config/supabase.js';
-const supabase = getSupabase();
+import { db } from '../db/databaseClient.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -14,7 +13,7 @@ router.get('/profile', async (req, res) => {
     const userId = req.user.user.id;
 
     // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await db
       .from('users')
       .select('*')
       .eq('id', userId)
@@ -25,7 +24,7 @@ router.get('/profile', async (req, res) => {
     }
 
     // Get booking stats
-    const { data: bookings, error: bookingsError } = await supabase
+    const { data: bookings, error: bookingsError } = await db
       .from('bookings')
       .select('id, status, created_at')
       .eq('user_id', userId);
@@ -89,7 +88,7 @@ router.patch('/profile', async (req, res) => {
     };
 
     // Update user profile
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('users')
       .update(updateData)
       .eq('id', userId)
