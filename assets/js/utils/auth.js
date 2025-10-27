@@ -108,6 +108,7 @@ class AuthManager {
     try {
       const apiBase = getAPIBase();
       console.log('🔐 Auth register to:', apiBase);
+      console.log('📧 Registering user:', userData.email);
       
       const response = await fetch(`${apiBase}/auth/register`, {
         method: 'POST',
@@ -120,12 +121,23 @@ class AuthManager {
         })
       });
       
+      console.log('📡 Registration response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Registration failed:', errorData);
+        return { success: false, message: errorData.error || `Server error: ${response.status}` };
+      }
+      
       const data = await response.json();
+      console.log('✅ Registration response:', data);
       
       if (data.success) {
         // Store token and user
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        if (data.token) {
+          localStorage.setItem('auth_token', data.token);
+          localStorage.setItem('auth_user', JSON.stringify(data.user));
+        }
         
         this.currentUser = data.user;
         this.updateHeaderForLoggedInUser();
@@ -143,7 +155,7 @@ class AuthManager {
       return { success: false, message: data.error || 'Registration failed' };
     } catch (error) {
       console.error('Register error:', error);
-      return { success: false, message: 'Failed to connect to server. Make sure backend is running.' };
+      return { success: false, message: 'Failed to connect to server: ' + error.message };
     }
   }
 
