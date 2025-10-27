@@ -36,8 +36,11 @@ async function apiRequest(endpoint, options = {}) {
     headers
   };
 
+  const fullUrl = `${API_BASE}${endpoint}`;
+  console.log('📡 API Request:', fullUrl);
+
   try {
-    const response = await fetch(`${API_BASE}${endpoint}`, config);
+    const response = await fetch(fullUrl, config);
     const data = await response.json();
 
     if (!response.ok) {
