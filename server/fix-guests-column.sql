@@ -10,3 +10,4 @@ COMMENT ON COLUMN bookings.guests IS 'Guest information stored as JSON: {"adults
 
 
 
+
