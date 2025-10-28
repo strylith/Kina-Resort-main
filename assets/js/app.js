@@ -9,7 +9,7 @@ import { MyBookingsPage } from './pages/myBookings.js';
 import { AuthPage } from './pages/auth.js';
 import { RegisterPage } from './pages/register.js';
 import { ForgotPasswordPage } from './pages/forgotPassword.js';
-import { BookingsPage } from './pages/bookings.js';
+import { RoomsPage } from './pages/rooms.js';
 import { WeatherPage } from './pages/weather.js';
 import { CheckoutPage } from './pages/checkout.js';
 import { AboutPage } from './pages/about.js';
@@ -28,11 +28,10 @@ let scrollAnimations = null;
 const routes = {
   '/': HomePage,
   '/packages': PackagesPage,
-  '/rooms': MyBookingsPage,
+  '/rooms': MyBookingsPage, // My Bookings page (with Re-Edit feature)
   '/auth': AuthPage,
   '/register': RegisterPage,
   '/forgot-password': ForgotPasswordPage,
-  '/bookings': BookingsPage,
   '/weather': WeatherPage,
   '/checkout': CheckoutPage,
   '/about': AboutPage,

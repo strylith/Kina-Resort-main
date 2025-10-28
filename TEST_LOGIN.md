@@ -81,3 +81,4 @@ You should see the Kina Resort homepage.
 
 **Recommendation:** Create a fresh account using Option 1 - it's the easiest and will work for sure!
 
+

@@ -11,7 +11,9 @@ let bookingFormState = {
   formData: {},
   errors: {},
   savedFormData: {},
-  returningFromCottage: false // Track if we're returning from cottage selection
+  returningFromCottage: false, // Track if we're returning from cottage selection
+  editMode: false, // Track if we're editing an existing booking
+  bookingId: null // ID of booking being edited
 };
 
 // Room types for selection
@@ -80,10 +82,12 @@ async function isRoomAvailable(roomId, checkinDate, checkoutDate) {
 
 
 // Open booking modal with optional pre-selection and pre-filled dates
-export function openBookingModal(initialType = 'room', packageTitle = '', preFillData = null) {
+export function openBookingModal(initialType = 'room', packageTitle = '', preFillData = null, editMode = false, bookingId = null) {
   closeBookingModal();
   
   bookingFormState.reservationType = initialType;
+  bookingFormState.editMode = editMode;
+  bookingFormState.bookingId = bookingId;
   bookingFormState.addCottageToRoom = false;
   bookingFormState.addRoomToCottage = false;
   bookingFormState.formData = {};
@@ -91,7 +95,17 @@ export function openBookingModal(initialType = 'room', packageTitle = '', preFil
   
   // Handle pre-fill data (dates, selected rooms, etc.)
   if (preFillData) {
-    if (preFillData.fromDateSelection) {
+    if (editMode) {
+      // Pre-fill all fields for editing
+      bookingFormState.preFillDates = {
+        checkin: preFillData.checkIn || preFillData.checkin,
+        checkout: preFillData.checkOut || preFillData.checkout
+      };
+      bookingFormState.selectedRoomsFromFlow = preFillData.selectedRooms || [];
+      bookingFormState.guestInfo = preFillData.guestInfo || {};
+      bookingFormState.paymentMode = preFillData.paymentMode;
+      bookingFormState.perRoomGuests = preFillData.perRoomGuests || [];
+    } else if (preFillData.fromDateSelection) {
       // Coming from date selection flow
       bookingFormState.preFillDates = {
         checkin: preFillData.checkin,
@@ -106,6 +120,9 @@ export function openBookingModal(initialType = 'room', packageTitle = '', preFil
   } else {
     bookingFormState.preFillDates = null;
     bookingFormState.selectedRoomsFromFlow = [];
+    bookingFormState.guestInfo = {};
+    bookingFormState.paymentMode = null;
+    bookingFormState.perRoomGuests = [];
   }
   
   const modalHTML = `
@@ -119,8 +136,8 @@ export function openBookingModal(initialType = 'room', packageTitle = '', preFil
         </button>
         
         <div class="booking-modal-header">
-          <h2>Make a Reservation</h2>
-          <p class="booking-subtitle">Complete your booking details below</p>
+          <h2>${bookingFormState.editMode ? 'Edit Booking' : 'Make a Reservation'}</h2>
+          <p class="booking-subtitle">${bookingFormState.editMode ? 'Update your booking details below' : 'Complete your booking details below'}</p>
           
           <div class="reservation-type-selector" ${bookingFormState.selectedRoomsFromFlow?.length > 0 ? 'style="display: none;"' : ''}>
             <button class="type-tab ${initialType === 'room' ? 'active' : ''}" data-type="room" onclick="changeReservationType('room')">
@@ -261,19 +278,19 @@ function renderFormFields(type) {
       <p class="section-description">Person making the reservation and responsible for payment</p>
       <div class="form-field">
         <label for="guest-name" class="form-label">Full Name *</label>
-        <input type="text" id="guest-name" name="guestName" class="form-input" required>
+        <input type="text" id="guest-name" name="guestName" class="form-input" value="${bookingFormState.guestInfo?.name || ''}" required>
         <div class="form-error" id="guest-name-error"></div>
       </div>
       
       <div class="form-field">
         <label for="email" class="form-label">Email Address *</label>
-        <input type="email" id="email" name="email" class="form-input" required>
+        <input type="email" id="email" name="email" class="form-input" value="${bookingFormState.guestInfo?.email || ''}" required>
         <div class="form-error" id="email-error"></div>
       </div>
       
       <div class="form-field">
         <label for="contact" class="form-label">Contact Number *</label>
-        <input type="tel" id="contact" name="contact" class="form-input" required>
+        <input type="tel" id="contact" name="contact" class="form-input" value="${bookingFormState.guestInfo?.contact || ''}" required>
         <div class="form-error" id="contact-error"></div>
       </div>
     </div>
@@ -561,10 +578,10 @@ function renderPaymentAndAgreement() {
       <div class="form-field">
         <label for="payment-mode" class="form-label">Mode of Payment *</label>
         <select id="payment-mode" name="paymentMode" class="form-select" required>
-          <option value="" disabled selected>Select Payment Method</option>
-          <option value="bank-transfer">Bank Transfer</option>
-          <option value="gcash">GCash</option>
-          <option value="credit-card">Credit Card</option>
+          <option value="" ${!bookingFormState.paymentMode ? 'disabled selected' : ''}>Select Payment Method</option>
+          <option value="bank-transfer" ${bookingFormState.paymentMode === 'bank-transfer' ? 'selected' : ''}>Bank Transfer</option>
+          <option value="gcash" ${bookingFormState.paymentMode === 'gcash' ? 'selected' : ''}>GCash</option>
+          <option value="credit-card" ${bookingFormState.paymentMode === 'credit-card' ? 'selected' : ''}>Credit Card</option>
         </select>
         <div class="form-error" id="payment-mode-error"></div>
       </div>
@@ -598,7 +615,7 @@ function renderPaymentAndAgreement() {
       <button type="submit" class="booking-submit-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 12l2 2 4-4"></path>
-          <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+          ${bookingFormState.editMode ? '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>' : '<path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>'}
           <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
           <path d="M12 3c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"></path>
           <path d="M12 21c0-1 1-3 3-3s3 2 3 3-1 3-3 3-3-2-3-3"></path>
@@ -609,8 +626,11 @@ function renderPaymentAndAgreement() {
   `;
 }
 
-// Get submit button text based on reservation type
+// Get submit button text based on reservation type and edit mode
 function getSubmitButtonText() {
+  if (bookingFormState.editMode) {
+    return 'Update Booking';
+  }
   switch (bookingFormState.reservationType) {
     case 'room':
       return 'Book My Room';
@@ -680,24 +700,30 @@ function generatePerRoomGuestInputs() {
   let html = '<div class="per-room-guests-section">';
   
   selectedRooms.forEach(roomId => {
+    // Get pre-filled data for this room if in edit mode
+    const roomGuest = bookingFormState.perRoomGuests?.find(rg => rg.roomId === roomId);
+    const guestName = roomGuest?.guestName || '';
+    const adults = roomGuest?.adults || 1;
+    const children = roomGuest?.children || 0;
+    
     html += `
       <div class="room-guests-card" data-room-id="${roomId}">
         <h5>${roomId}</h5>
         
         <div class="form-field">
           <label for="${roomId}-guest-name" class="form-label">Primary Guest Name (Optional)</label>
-          <input type="text" id="${roomId}-guest-name" name="${roomId}-guestName" class="form-input" placeholder="Leave blank if same as main booker">
+          <input type="text" id="${roomId}-guest-name" name="${roomId}-guestName" class="form-input" value="${guestName}" placeholder="Leave blank if same as main booker">
           <small class="form-hint">The person staying in this room</small>
         </div>
         
         <div class="guests-inputs-row">
           <div class="form-field">
             <label for="${roomId}-adults" class="form-label">Adults *</label>
-            <input type="number" id="${roomId}-adults" name="${roomId}-adults" class="form-input" min="1" max="4" value="1" required onchange="updateTotalGuests()">
+            <input type="number" id="${roomId}-adults" name="${roomId}-adults" class="form-input" min="1" max="4" value="${adults}" required onchange="updateTotalGuests()">
           </div>
           <div class="form-field">
             <label for="${roomId}-children" class="form-label">Children</label>
-            <input type="number" id="${roomId}-children" name="${roomId}-children" class="form-input" min="0" max="3" value="0" onchange="updateTotalGuests()">
+            <input type="number" id="${roomId}-children" name="${roomId}-children" class="form-input" min="0" max="3" value="${children}" onchange="updateTotalGuests()">
           </div>
         </div>
       </div>
@@ -1541,22 +1567,15 @@ function validateForm() {
   return isValid;
 }
 
-// Save booking to localStorage
-async function saveBookingToSupabase(bookingData) {
-  console.log('saveBookingToSupabase called with:', bookingData);
+// Save booking to API (mock or real)
+async function saveBooking(bookingData) {
+  console.log('[Booking] saveBooking called with:', bookingData);
   
   try {
-    const token = localStorage.getItem('auth_token');
-    console.log('Auth token present:', !!token);
-    
-    if (!token) {
-      throw new Error('User not authenticated');
-    }
-
     // Calculate total cost
     const costs = calculateTotalCost();
     const totalCost = costs ? costs.total : 0;
-    console.log('Calculated total cost:', totalCost);
+    console.log('[Booking] Calculated total cost:', totalCost);
 
     // Prepare booking payload
     const bookingPayload = {
@@ -1572,23 +1591,43 @@ async function saveBookingToSupabase(bookingData) {
       selectedCottages: bookingState.selectedCottages || []
     };
     
-    console.log('Booking payload:', JSON.stringify(bookingPayload, null, 2));
+    console.log('[Booking] Booking payload:', JSON.stringify(bookingPayload, null, 2));
 
+    // Use mock API for bookings in development (no auth required)
     const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    const apiBase = isProduction ? 'https://kina-resort-main-production.up.railway.app/api' : 'http://localhost:3000/api';
-    console.log('Sending request to', `${apiBase}/bookings`);
+    const useMockApi = !isProduction; // Use mock API in development
+    
+    const apiBase = useMockApi 
+      ? 'http://localhost:3000/mock' 
+      : (isProduction 
+          ? 'https://kina-resort-main-production.up.railway.app/api' 
+          : 'http://localhost:3000/api');
+    
+    console.log('[Booking] Sending request to', `${apiBase}/bookings`);
+    console.log('[Booking] Using mock API:', useMockApi);
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Only add auth token if using real API (not mock)
+    if (!useMockApi) {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('User not authenticated');
+      }
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${apiBase}/bookings`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers,
       body: JSON.stringify(bookingPayload)
     });
 
-    console.log('Response status:', response.status);
+    console.log('[Booking] Response status:', response.status);
     const result = await response.json();
-    console.log('Response data:', result);
+    console.log('[Booking] Response data:', result);
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to save booking');
@@ -1596,14 +1635,54 @@ async function saveBookingToSupabase(bookingData) {
 
     return result.data;
   } catch (error) {
-    console.error('Save booking error:', error);
-    console.error('Error stack:', error.stack);
+    console.error('[Booking] Save booking error:', error);
+    console.error('[Booking] Error stack:', error.stack);
     
     // Provide user-friendly error message
     if (error.message.includes('backend server') || error.message === 'Failed to fetch') {
-      throw new Error('Backend server is not running. Please start the server with "npm run server" and try again.');
+      throw new Error('Backend server is not running. Please start the server with "npm start" in the server directory and try again.');
     }
     
+    throw error;
+  }
+}
+
+// Update existing booking
+async function updateExistingBooking(bookingId, bookingData) {
+  console.log('[Booking] updateExistingBooking called with:', bookingId, bookingData);
+  
+  try {
+    const costs = calculateTotalCost();
+    const totalCost = costs ? costs.total : 0;
+    console.log('[Booking] Calculated total cost:', totalCost);
+
+    const bookingPayload = {
+      packageId: 1,
+      checkIn: bookingData.dates.checkin,
+      checkOut: bookingData.dates.checkout,
+      guests: bookingData.guests,
+      totalCost: totalCost,
+      paymentMode: bookingData.payment,
+      perRoomGuests: bookingData.perRoomGuests || [],
+      contactNumber: bookingData.guestInfo.contact,
+      specialRequests: bookingData.selections.specialRequests || '',
+      selectedCottages: bookingState.selectedCottages || []
+    };
+    
+    console.log('[Booking] Update payload:', JSON.stringify(bookingPayload, null, 2));
+
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const useMockApi = !isProduction;
+    
+    console.log('[Booking] Updating via', useMockApi ? 'mock' : 'real', 'API');
+
+    const { updateBooking } = await import('../utils/api.js');
+    const result = await updateBooking(bookingId, bookingPayload);
+    
+    console.log('[Booking] Update response:', result);
+    return result;
+  } catch (error) {
+    console.error('[Booking] Update booking error:', error);
     throw error;
   }
 }
@@ -1787,16 +1866,41 @@ window.submitBooking = async function(event) {
     };
   }
   
-  // Save booking to Supabase
-  console.log('=== Attempting to save booking to Supabase ===');
+  // Save booking to API
+  console.log('=== Attempting to save booking ===');
   console.log('Booking data:', JSON.stringify(bookingData, null, 2));
   
   try {
-    console.log('Calling saveBookingToSupabase...');
-    const savedBooking = await saveBookingToSupabase(bookingData);
-    console.log('Booking saved successfully:', savedBooking);
-    showBookingSuccess(bookingData, savedBooking);
-    console.log('=== Booking Submission Complete ===');
+    if (bookingFormState.editMode && bookingFormState.bookingId) {
+      console.log('Updating existing booking...');
+      const updatedBooking = await updateExistingBooking(bookingFormState.bookingId, bookingData);
+      console.log('Booking updated successfully:', updatedBooking);
+      
+      // Clear calendar cache
+      if (window.clearCalendarCache) {
+        window.clearCalendarCache();
+      }
+      
+      // Use toast notification
+      const { showToast } = await import('./toast.js');
+      showToast('Booking updated successfully!', 'success');
+      
+      closeBookingModal();
+      // Reload bookings page
+      location.reload();
+    } else {
+      console.log('Calling saveBooking...');
+      const savedBooking = await saveBooking(bookingData);
+      console.log('Booking saved successfully:', savedBooking);
+      
+      // Clear calendar cache so it refreshes
+      if (window.clearCalendarCache) {
+        window.clearCalendarCache();
+      }
+      
+      showBookingSuccess(bookingData, savedBooking);
+      console.log('=== Booking Submission Complete ===');
+    }
   } catch (error) {
     console.error('Failed to save booking:', error);
     console.error('Error details:', error.message);
@@ -1931,7 +2035,7 @@ function showBookingSuccess(bookingData, savedBooking) {
 // Global function for navigating to My Bookings
 window.goToMyBookings = function() {
   document.querySelector('.booking-success-modal')?.remove();
-  location.hash = '#/my-bookings';
+  location.hash = '#/rooms';
 }
 
 // Handle escape key

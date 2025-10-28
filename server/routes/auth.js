@@ -6,8 +6,15 @@ import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
 
 // Helper function to generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+const generateToken = (userId, email = null, userMetadata = {}) => {
+  const secret = process.env.JWT_SECRET || 'test-secret-key-for-tests';
+  const payload = { 
+    userId, 
+    email,
+    user_metadata: userMetadata,
+    ...userMetadata 
+  };
+  return jwt.sign(payload, secret, { expiresIn: '7d' });
 };
 
 // POST /api/auth/register
@@ -62,8 +69,12 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Generate token
-    const token = generateToken(authData.user.id);
+    // Generate token with user info
+    const token = generateToken(
+      authData.user.id,
+      email,
+      { firstName, lastName }
+    );
 
     res.json({
       success: true,
@@ -123,8 +134,15 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate token
-    const token = generateToken(signInData.user.id);
+    // Generate token with user info
+    const token = generateToken(
+      signInData.user.id,
+      profile.email,
+      { 
+        firstName: profile.first_name, 
+        lastName: profile.last_name 
+      }
+    );
 
     res.json({
       success: true,

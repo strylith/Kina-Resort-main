@@ -3,7 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { db } from './db/databaseClient.js';
 import authRoutes from './routes/auth.js';
 import packagesRoutes from './routes/packages.js';
 import bookingsRoutes from './routes/bookings.js';
@@ -74,36 +73,161 @@ app.use('/api/bookings', bookingsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/settings', settingsRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found'
-  });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({
-    success: false,
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
+// Mock routes, 404 handler, and error handler will be loaded in startServer()
+// This ensures proper middleware order: API routes → Mock routes → 404 handler → Error handler
 
 // Initialize database and start server
 async function startServer() {
   try {
     // Database client is initialized via db/databaseClient.js
     // It will use mock DB if USE_MOCK_DB=true or NODE_ENV=test
-    console.log('✅ Database client initialized');
     
-    // Start server
+    // Seed default packages if using mock database
+    if (process.env.USE_MOCK_DB === 'true' || process.env.NODE_ENV === 'test') {
+      const { mockClient } = await import('./db/databaseClient.js');
+      
+      console.log('🧩 Seeding default packages for mock database...');
+      mockClient.seed('packages', [
+        // Rooms (matching frontend luxuryCard.js)
+        {
+          id: 1,
+          title: 'Standard Room',
+          category: 'rooms',
+          price: '₱5,500/night',
+          capacity: 4,
+          description: 'Comfortable room with air conditioning, private bathroom, and garden view.',
+          image_url: 'images/kina1.jpg',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          title: 'Ocean View Room',
+          category: 'rooms',
+          price: '₱7,200/night',
+          capacity: 4,
+          description: 'Room with balcony overlooking the ocean, perfect for sunset views.',
+          image_url: 'images/kina2.jpg',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 3,
+          title: 'Deluxe Suite',
+          category: 'rooms',
+          price: '₱8,500/night',
+          capacity: 4,
+          description: 'Spacious suite with separate living area, mini-fridge, and premium amenities.',
+          image_url: 'images/kina3.jpg',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 4,
+          title: 'Premium King',
+          category: 'rooms',
+          price: '₱7,500/night',
+          capacity: 4,
+          description: 'Executive comfort with elegant design and premium furnishings.',
+          image_url: 'images/resort1.JPG',
+          created_at: new Date().toISOString()
+        },
+        // Cottages (matching frontend)
+        {
+          id: 5,
+          title: 'Standard Cottage',
+          category: 'cottages',
+          price: '₱9,500/night',
+          capacity: 6,
+          description: 'Private cottage with direct beach access, outdoor seating area, and basic amenities.',
+          image_url: 'images/cottage_1.JPG',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 6,
+          title: 'Garden Cottage',
+          category: 'cottages',
+          price: '₱7,500/night',
+          capacity: 4,
+          description: 'Cozy cottage surrounded by tropical gardens, perfect for peaceful relaxation.',
+          image_url: 'images/cottage_2.JPG',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 7,
+          title: 'Family Cottage',
+          category: 'cottages',
+          price: '₱10,200/night',
+          capacity: 7,
+          description: 'Spacious cottage with 2 bedrooms, kitchenette, and living area for families.',
+          image_url: 'images/kina1.jpg',
+          created_at: new Date().toISOString()
+        },
+        // Function Halls (matching frontend)
+        {
+          id: 8,
+          title: 'Grand Function Hall',
+          category: 'function-halls',
+          price: '₱15,000/day',
+          capacity: 200,
+          description: 'Spacious hall perfect for weddings, conferences, and large events. Includes tables, chairs, sound system, and air conditioning.',
+          image_url: 'images/Function Hall.JPG',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 9,
+          title: 'Intimate Function Hall',
+          category: 'function-halls',
+          price: '₱10,000/day',
+          capacity: 100,
+          description: 'Cozy hall ideal for birthday parties, meetings, and gatherings. Perfect for smaller celebrations with modern amenities.',
+          image_url: 'images/Function Hall.JPG',
+          created_at: new Date().toISOString()
+        }
+      ]);
+      console.log('✅ Default packages seeded');
+    }
+    
+    // Load mock routes BEFORE starting server (critical for route availability)
+    if (process.env.USE_MOCK_DB === 'true' || process.env.NODE_ENV === 'test') {
+      try {
+        const { default: mockBookingsRoutes } = await import('./routes/mockBookings.js');
+        app.use('/mock', mockBookingsRoutes);
+        console.log('🧪 Mock API routes registered at /mock');
+        console.log('   - GET  /mock/bookings');
+        console.log('   - POST /mock/bookings');
+        console.log('   - PATCH /mock/bookings/:id');
+        console.log('   - DELETE /mock/bookings/:id');
+        console.log('   - GET  /mock/bookings/availability/:packageId');
+      } catch (error) {
+        console.error('❌ Failed to load mock routes:', error);
+        throw error;
+      }
+    }
+    
+    // 404 handler (must be after all route registrations)
+    app.use((req, res) => {
+      res.status(404).json({
+        success: false,
+        error: 'Route not found'
+      });
+    });
+
+    // Error handler
+    app.use((err, req, res, next) => {
+      console.error('Server error:', err);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    });
+    
+    // Start server AFTER all routes and handlers are registered
     app.listen(PORT, () => {
       console.log(`🚀 Kina Resort Backend API running on port ${PORT}`);
       console.log(`📡 Health check: http://localhost:${PORT}/health`);
       console.log(`📚 API endpoint: http://localhost:${PORT}/api`);
+      if (process.env.USE_MOCK_DB === 'true') {
+        console.log(`🧪 Mock API endpoint: http://localhost:${PORT}/mock`);
+      }
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

@@ -40,6 +40,13 @@ let loadedMonths = new Set();
 // Debounce timer for month navigation to prevent rapid API calls
 let monthNavigationTimer = null;
 
+// Export function to clear cache when bookings change
+window.clearCalendarCache = function() {
+  console.log('[Calendar] Clearing availability cache...');
+  availabilityCache.clear();
+  loadedMonths.clear();
+};
+
 // Get availability status for dates (now integrated with database)
 async function getDateStatus(date, packageId) {
   const today = new Date();
@@ -820,14 +827,22 @@ export function openCalendarModal(packageTitle, reservationCount, packageCategor
           </div>
           <div class="legend-item">
             <div class="legend-color available-all"></div>
-            <span>Available</span>
+            <span>All Available</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color available-2"></div>
+            <span>Partial</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color available-1"></div>
+            <span>Limited</span>
           </div>
           <div class="legend-item">
             <div class="legend-color booked-all"></div>
             <span>Fully Booked</span>
           </div>
           <div class="legend-item">
-            <div class="legend-color" style="background: #ffebee; color: #c62828; font-size: 10px; padding: 4px; line-height: 1;">A1, A2</div>
+            <div class="legend-color" style="background: #ffcdd2; color: #b71c1c; font-size: 10px; padding: 4px; line-height: 1;">A1, A2</div>
             <span>Booked Rooms</span>
           </div>
         </div>

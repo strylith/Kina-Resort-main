@@ -2,16 +2,25 @@
 // Use production API if deployed, otherwise use localhost for development
 // Check if we're NOT on localhost (production environment)
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+
+// Use mock API for bookings when in development (no auth required)
+// Keep regular API for auth/packages/settings (which work with mock DB)
+const USE_MOCK_BOOKINGS = !isProduction; // Use mock bookings in development
+
 const API_BASE = isProduction 
   ? 'https://kina-resort-main-production.up.railway.app/api'
   : 'http://localhost:3000/api';
+
+const MOCK_API_BASE = 'http://localhost:3000/mock';
 
 // Log which API is being used
 console.log('🌐 API Configuration:');
 console.log('  Location:', window.location.href);
 console.log('  Hostname:', window.location.hostname);
 console.log('  Is Production:', isProduction);
+console.log('  Using Mock Bookings:', USE_MOCK_BOOKINGS);
 console.log('  API_BASE:', API_BASE);
+console.log('  MOCK_API_BASE:', MOCK_API_BASE);
 
 // Helper function to get auth token
 function getAuthToken() {
@@ -165,21 +174,61 @@ export async function fetchPackageAvailability(packageId, startDate, endDate) {
   return data.data;
 }
 
-// Check booking availability (no auth required)
+// Check booking availability (conditionally routed)
 export async function checkAvailability(packageId, checkIn, checkOut, category = null) {
   let url = `/bookings/availability/${packageId}?checkIn=${checkIn}&checkOut=${checkOut}`;
   if (category) {
     url += `&category=${category}`;
   }
   
-  const data = await apiRequest(url, { method: 'GET' });
-  return data;
+  // Use mock API in development mode
+  if (USE_MOCK_BOOKINGS) {
+    console.log('[MockDB] Checking availability via mock API...');
+    const data = await mockApiRequest(url, { method: 'GET' });
+    return data;
+  } else {
+    const data = await apiRequest(url, { method: 'GET' });
+    return data;
+  }
+}
+
+// Bookings API - use mock API (no auth required)
+async function mockApiRequest(endpoint, options = {}) {
+  const fullUrl = `${MOCK_API_BASE}${endpoint}`;
+  console.log('📡 Mock API Request:', fullUrl);
+
+  try {
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Mock API request failed');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Mock API request error:', error);
+    throw error;
+  }
 }
 
 // Bookings API
 export async function fetchUserBookings() {
-  const data = await apiRequest('/bookings');
-  return data.data || [];
+  if (USE_MOCK_BOOKINGS) {
+    console.log('[MockDB] Fetching user bookings from mock API...');
+    const data = await mockApiRequest('/bookings');
+    return data.data || [];
+  } else {
+    const data = await apiRequest('/bookings');
+    return data.data || [];
+  }
 }
 
 export async function createBooking(bookingData) {
@@ -196,18 +245,35 @@ export async function createBooking(bookingData) {
 }
 
 export async function updateBooking(bookingId, updates) {
-  const data = await apiRequest(`/bookings/${bookingId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(updates)
-  });
-  return data.data;
+  if (USE_MOCK_BOOKINGS) {
+    console.log('[MockDB] Updating booking via mock API...');
+    const data = await mockApiRequest(`/bookings/${bookingId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+    return data.data;
+  } else {
+    const data = await apiRequest(`/bookings/${bookingId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+    return data.data;
+  }
 }
 
 export async function cancelBooking(bookingId) {
-  const data = await apiRequest(`/bookings/${bookingId}`, {
-    method: 'DELETE'
-  });
-  return data;
+  if (USE_MOCK_BOOKINGS) {
+    console.log('[MockDB] Cancelling booking via mock API...');
+    const data = await mockApiRequest(`/bookings/${bookingId}`, {
+      method: 'DELETE'
+    });
+    return data;
+  } else {
+    const data = await apiRequest(`/bookings/${bookingId}`, {
+      method: 'DELETE'
+    });
+    return data;
+  }
 }
 
 export async function getBooking(bookingId) {

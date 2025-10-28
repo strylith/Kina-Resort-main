@@ -222,36 +222,45 @@ router.get('/', async (req, res) => {
   try {
     const userId = req.user.user.id;
 
-    const { data, error } = await supabase
+    // Fetch bookings
+    const { data: bookings, error: bookingsError } = await db
       .from('bookings')
-      .select(`
-        *,
-        packages (
-          id,
-          title,
-          category,
-          price,
-          image_url
-        ),
-        booking_items (
-          id,
-          item_type,
-          item_id,
-          guest_name,
-          adults,
-          children
-        )
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      throw error;
+    if (bookingsError) {
+      throw bookingsError;
     }
+
+    // Fetch booking items for each booking
+    const bookingsWithItems = await Promise.all((bookings || []).map(async (booking) => {
+      const { data: items } = await db
+        .from('booking_items')
+        .select('*')
+        .eq('booking_id', booking.id);
+
+      // Fetch package info
+      let packageInfo = null;
+      if (booking.package_id) {
+        const { data: pkg } = await db
+          .from('packages')
+          .select('*')
+          .eq('id', booking.package_id)
+          .single();
+        packageInfo = pkg;
+      }
+
+      return {
+        ...booking,
+        booking_items: items || [],
+        packages: packageInfo
+      };
+    }));
 
     res.json({
       success: true,
-      data: data || []
+      data: bookingsWithItems
     });
   } catch (error) {
     console.error('Fetch bookings error:', error);
@@ -323,19 +332,35 @@ router.post('/', async (req, res) => {
       perRoomGuests: perRoomGuests?.length || 0
     });
 
-    // Verify package exists
-    const { data: packageData, error: packageError } = await supabase
+    // Verify package exists - handle both string and number IDs
+    console.log(`[Booking] Looking up package with ID: ${packageId} (type: ${typeof packageId})`);
+    
+    const { data: packageData, error: packageError } = await db
       .from('packages')
       .select('*')
       .eq('id', packageId)
       .single();
 
+    console.log(`[Booking] Package lookup result:`, { 
+      found: !!packageData, 
+      error: packageError?.code || null,
+      packageId: packageData?.id 
+    });
+
     if (packageError || !packageData) {
+      console.error(`[Booking] Package not found. ID: ${packageId}, Error:`, packageError);
+      
+      // Log available packages for debugging
+      const { data: allPackages } = await db.from('packages').select('id, title');
+      console.log('[Booking] Available packages:', allPackages);
+      
       return res.status(404).json({
         success: false,
-        error: 'Package not found'
+        error: `Package not found (ID: ${packageId})`
       });
     }
+    
+    console.log(`[Booking] Package found: ${packageData.title} (ID: ${packageData.id})`);
 
     // Create main booking record
     // Note: per_room_guests and selected_cottages are stored in booking_items table
@@ -356,11 +381,12 @@ router.post('/', async (req, res) => {
     console.log('[Booking] Inserting booking data:', JSON.stringify(bookingDataToInsert, null, 2));
     
     // 1. Create the main booking record
-    const { data: booking, error: bookingError } = await supabase
+    const { data: insertedBookings, error: bookingError } = await db
       .from('bookings')
-      .insert(bookingDataToInsert)
-      .select()
-      .single();
+      .insert(bookingDataToInsert);
+    
+    // Get the inserted booking (insert always returns array)
+    const booking = Array.isArray(insertedBookings) ? insertedBookings[0] : insertedBookings;
 
     if (bookingError) {
       console.error('[Booking] Database error:', bookingError);
@@ -384,7 +410,7 @@ router.post('/', async (req, res) => {
       
       console.log('[Booking] Creating room items:', JSON.stringify(roomItems, null, 2));
       
-      const { error: roomsError } = await supabase
+      const { error: roomsError } = await db
         .from('booking_items')
         .insert(roomItems);
       
@@ -406,7 +432,7 @@ router.post('/', async (req, res) => {
       
       console.log('[Booking] Creating cottage items:', JSON.stringify(cottageItems, null, 2));
       
-      const { error: cottagesError } = await supabase
+      const { error: cottagesError } = await db
         .from('booking_items')
         .insert(cottageItems);
       
@@ -418,8 +444,16 @@ router.post('/', async (req, res) => {
       console.log(`[Booking] Created ${cottageItems.length} cottage items`);
     }
 
-    // Update user's total bookings
-    await supabase.rpc('increment_user_bookings', { user_uuid: userId });
+    // Update user's total bookings (mock DB doesn't support RPC, so we'll do it manually)
+    try {
+      const { data: user } = await db.from('users').select('*').eq('id', userId).single();
+      if (user) {
+        await db.from('users').update({ total_bookings: (user.total_bookings || 0) + 1 }).eq('id', userId);
+      }
+    } catch (err) {
+      // Ignore if user doesn't exist or update fails
+      console.log('[Booking] Could not increment user bookings:', err.message);
+    }
 
     // Add to reservations calendar
     const startDate = new Date(checkIn);
@@ -428,20 +462,60 @@ router.post('/', async (req, res) => {
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
       
-      await supabase
-        .from('reservations_calendar')
-        .upsert({
-          package_id: packageId,
-          date: dateStr,
-          reserved_count: 1
-        }, {
-          onConflict: 'package_id,date'
-        });
+      // Upsert reservation calendar entry (mock DB: check if exists, update or insert)
+      try {
+        const { data: existing } = await db
+          .from('reservations_calendar')
+          .select('*')
+          .eq('package_id', packageId)
+          .eq('date', dateStr)
+          .single();
+        
+        if (existing) {
+          await db
+            .from('reservations_calendar')
+            .update({ reserved_count: (existing.reserved_count || 0) + 1 })
+            .eq('package_id', packageId)
+            .eq('date', dateStr);
+        } else {
+          await db
+            .from('reservations_calendar')
+            .insert({
+              package_id: packageId,
+              date: dateStr,
+              reserved_count: 1
+            });
+        }
+      } catch (err) {
+        // Ignore calendar errors - not critical for booking
+        console.log('[Booking] Could not update calendar:', err.message);
+      }
     }
+
+    // Return booking with items and package info
+    const { data: bookingItems } = await db
+      .from('booking_items')
+      .select('*')
+      .eq('booking_id', booking.id);
+    
+    const bookingResponse = {
+      ...booking,
+      booking_items: bookingItems || [],
+      packages: packageData
+    };
+
+    console.log('[BookingAPI] Booking created successfully:', {
+      id: booking.id,
+      packageId: booking.package_id,
+      checkIn: booking.check_in,
+      checkOut: booking.check_out,
+      totalCost: booking.total_cost,
+      itemsCount: bookingItems?.length || 0
+    });
 
     res.status(201).json({
       success: true,
-      data: booking
+      data: bookingResponse
     });
   } catch (error) {
     console.error('Create booking error:', error);
@@ -458,18 +532,9 @@ router.get('/:id', async (req, res) => {
     const userId = req.user.user.id;
     const { id } = req.params;
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('bookings')
-      .select(`
-        *,
-        packages (
-          id,
-          title,
-          category,
-          price,
-          image_url
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
@@ -505,7 +570,7 @@ router.patch('/:id', async (req, res) => {
     const { status, checkIn, checkOut, guests } = req.body;
 
     // Verify booking belongs to user
-    const { data: existingBooking, error: fetchError } = await supabase
+    const { data: existingBooking, error: fetchError } = await db
       .from('bookings')
       .select('*')
       .eq('id', id)
@@ -530,7 +595,7 @@ router.patch('/:id', async (req, res) => {
     if (guests) updateData.guests = guests;
 
     // Update booking
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('bookings')
       .update(updateData)
       .eq('id', id)
@@ -561,7 +626,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     // Verify booking belongs to user
-    const { data: existingBooking, error: fetchError } = await supabase
+    const { data: existingBooking, error: fetchError } = await db
       .from('bookings')
       .select('*')
       .eq('id', id)
@@ -576,7 +641,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Update status to cancelled instead of deleting
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('bookings')
       .update({ 
         status: 'cancelled',

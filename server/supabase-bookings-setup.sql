@@ -33,3 +33,7 @@ COMMENT ON COLUMN public.bookings.selected_cottages IS 'Array of selected cottag
 
 
 
+
+
+
+

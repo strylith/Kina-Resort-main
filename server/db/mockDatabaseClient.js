@@ -20,7 +20,9 @@ class MockDatabaseClient {
   reset() {
     Object.keys(this.tables).forEach(key => this.tables[key].clear());
     this.authUsers.clear();
-    console.log('Mock database reset');
+    if (process.env.DEBUG_TESTS) {
+      console.log('Mock database reset');
+    }
   }
 
   // Seed test data
@@ -31,8 +33,13 @@ class MockDatabaseClient {
     
     records.forEach(record => {
       const id = record.id || this.generateId();
-      this.tables[tableName].set(id, { id, ...record });
+      // Store with string key for consistency
+      this.tables[tableName].set(String(id), { ...record, id });
     });
+    
+    if (process.env.DEBUG_TESTS) {
+      console.log(`✅ Seeded ${records.length} records into ${tableName}`);
+    }
   }
 
   // Generate mock ID
@@ -114,6 +121,7 @@ class MockQueryBuilder {
   // Select fields
   select(fields = '*') {
     this.selectFields = fields;
+    this.selectCalled = true;
     return this;
   }
 
@@ -161,6 +169,10 @@ class MockQueryBuilder {
       return this.filters.every(filter => {
         switch (filter.type) {
           case 'eq':
+            // Handle type coercion for ID comparisons
+            if (filter.column === 'id' || filter.column === 'user_id' || filter.column === 'package_id' || filter.column === 'booking_id') {
+              return String(record[filter.column]) === String(filter.value);
+            }
             return record[filter.column] === filter.value;
           case 'in':
             return filter.values.includes(record[filter.column]);
@@ -178,6 +190,11 @@ class MockQueryBuilder {
   // Execute query
   async then(resolve, reject) {
     try {
+      // If this is an update operation, execute update
+      if (this.isUpdate) {
+        return await this.executeUpdate().then(resolve, reject);
+      }
+      
       const allData = Array.from(this.table.values());
       let filteredData = this.applyFilters(allData);
 
@@ -199,10 +216,19 @@ class MockQueryBuilder {
       }
 
       // Return in Supabase format
-      const result = {
-        data: this.limitValue === 1 ? (filteredData[0] || null) : filteredData,
-        error: null
-      };
+      let data, error = null;
+      
+      if (this.limitValue === 1) {
+        data = filteredData[0] || null;
+        // If single() was called and no result, return error
+        if (data === null) {
+          error = { code: 'PGRST116', message: 'No rows returned', details: null };
+        }
+      } else {
+        data = filteredData;
+      }
+
+      const result = { data, error };
 
       resolve(result);
       return result;
@@ -213,26 +239,50 @@ class MockQueryBuilder {
     }
   }
 
-  // Insert operation
-  async insert(record) {
-    const id = record.id || this.table.size + 1;
-    const newRecord = { id, ...record, created_at: new Date().toISOString() };
-    this.table.set(id, newRecord);
+  // Insert operation - supports single record or array
+  async insert(records) {
+    const recordsArray = Array.isArray(records) ? records : [records];
+    const inserted = [];
     
-    return { data: newRecord, error: null };
+    recordsArray.forEach((record, index) => {
+      // Use provided ID or generate sequential ID
+      const id = record.id || (this.table.size + index + 1);
+      const newRecord = { ...record, id, created_at: new Date().toISOString() };
+      this.table.set(String(id), newRecord);
+      inserted.push(newRecord);
+    });
+    
+    // Return in Supabase format - always return array
+    return { data: inserted, error: null };
   }
 
-  // Update operation
-  async update(updates) {
+  // Update operation - returns the query builder for chaining
+  update(updates) {
+    this.updateData = updates;
+    this.isUpdate = true;
+    return this;
+  }
+  
+  // Execute update with select chaining
+  async executeUpdate() {
     const allData = Array.from(this.table.values());
     const toUpdate = this.applyFilters(allData);
     
+    const updatedRecords = [];
     toUpdate.forEach(record => {
-      const updated = { ...this.table.get(record.id), ...updates, updated_at: new Date().toISOString() };
-      this.table.set(record.id, updated);
+      const recordId = String(record.id);
+      const existing = this.table.get(recordId);
+      const updated = { ...existing, ...this.updateData, updated_at: new Date().toISOString() };
+      this.table.set(recordId, updated);
+      updatedRecords.push(updated);
     });
 
-    return { data: toUpdate, error: null };
+    // If select() and single() were called, return filtered result
+    if (this.selectCalled && this.limitValue === 1) {
+      return { data: updatedRecords[0] || null, error: null };
+    }
+
+    return { data: updatedRecords, error: null };
   }
 
   // Delete operation
@@ -241,7 +291,7 @@ class MockQueryBuilder {
     const toDelete = this.applyFilters(allData);
     
     toDelete.forEach(record => {
-      this.table.delete(record.id);
+      this.table.delete(String(record.id));
     });
 
     return { data: toDelete, error: null };

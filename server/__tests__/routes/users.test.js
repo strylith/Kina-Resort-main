@@ -37,14 +37,23 @@ appWithAuth.use('/api/users', usersRoutes);
 
 describe('Users Routes', () => {
   let authToken;
+  let userId;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockClient.reset();
     
-    // Create a test user and generate token
-    const userId = 'test-user-123';
+    // Create a test user in auth system first
+    userId = 'test-user-123';
+    await dbAuth.admin.createUser({
+      id: userId,
+      email: 'test@example.com',
+      user_metadata: { firstName: 'Test', lastName: 'User' }
+    });
+    
+    // Generate token
     authToken = jwt.sign({ userId }, process.env.JWT_SECRET || 'test-secret');
     
+    // Seed user profile
     mockClient.seed('users', [
       {
         id: userId,
@@ -104,4 +113,5 @@ describe('Users Routes', () => {
     });
   });
 });
+
 

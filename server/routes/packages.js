@@ -1,7 +1,37 @@
 import express from 'express';
-import { db } from '../db/databaseClient.js';
+import { db, mockClient } from '../db/databaseClient.js';
 
 const router = express.Router();
+
+// GET /api/packages/debug - Debug endpoint to list all packages
+router.get('/debug', async (req, res) => {
+  try {
+    if (process.env.USE_MOCK_DB === 'true' || process.env.NODE_ENV === 'test') {
+      const packages = Array.from(mockClient.tables.packages.values());
+      return res.json({
+        success: true,
+        mode: 'mock',
+        count: packages.length,
+        packages: packages
+      });
+    } else {
+      const { data, error } = await db.from('packages').select('*');
+      if (error) throw error;
+      return res.json({
+        success: true,
+        mode: 'database',
+        count: data?.length || 0,
+        packages: data || []
+      });
+    }
+  } catch (error) {
+    console.error('Debug packages error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch packages debug info'
+    });
+  }
+});
 
 // GET /api/packages
 router.get('/', async (req, res) => {
@@ -81,7 +111,7 @@ router.get('/:id/availability', async (req, res) => {
     }
 
     // Check bookings for this package in the date range
-    const { data: bookings, error: bookingsError } = await supabase
+    const { data: bookings, error: bookingsError } = await db
       .from('bookings')
       .select('check_in, check_out, guests')
       .eq('package_id', id)
@@ -92,7 +122,7 @@ router.get('/:id/availability', async (req, res) => {
     }
 
     // Check reservations calendar for specific dates
-    const { data: reservations, error: reservationsError } = await supabase
+    const { data: reservations, error: reservationsError } = await db
       .from('reservations_calendar')
       .select('date, reserved_count')
       .eq('package_id', id)
@@ -104,7 +134,7 @@ router.get('/:id/availability', async (req, res) => {
     }
 
     // Get package capacity
-    const { data: packageData, error: packageError } = await supabase
+    const { data: packageData, error: packageError } = await db
       .from('packages')
       .select('capacity')
       .eq('id', id)

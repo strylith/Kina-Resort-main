@@ -44,13 +44,21 @@ describe('Auth Routes', () => {
 
   describe('POST /api/auth/login', () => {
     it('should login existing user', async () => {
-      // Seed a user first
-      await dbAuth.admin.createUser({
-        email: 'test@example.com',
-        password: 'testpass123',
-        user_metadata: { firstName: 'Test', lastName: 'User' }
-      });
+      // First create a user via registration to ensure both auth and profile exist
+      const registerResponse = await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'test@example.com',
+          password: 'testpass123',
+          firstName: 'Test',
+          lastName: 'User'
+        })
+        .expect(200);
 
+      expect(registerResponse.body.success).toBe(true);
+      const userId = registerResponse.body.user.id;
+
+      // Now test login
       const response = await request(app)
         .post('/api/auth/login')
         .send({
@@ -61,6 +69,7 @@ describe('Auth Routes', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.token).toBeDefined();
+      expect(response.body.user.email).toBe('test@example.com');
     });
 
     it('should return error for invalid credentials', async () => {
@@ -76,4 +85,5 @@ describe('Auth Routes', () => {
     });
   });
 });
+
 

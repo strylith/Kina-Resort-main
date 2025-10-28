@@ -7,7 +7,7 @@ export async function MyBookingsPage() {
   const authState = getAuthState();
   
   if (!authState.isLoggedIn) {
-    location.hash = '#/auth?return=' + encodeURIComponent('#/my-bookings');
+    location.hash = '#/auth?return=' + encodeURIComponent('#/rooms');
     return '<div class="container"><p>Redirecting to login...</p></div>';
   }
 
@@ -46,11 +46,83 @@ export async function MyBookingsPage() {
     
     try {
       await cancelBookingApi(bookingId);
+      
+      // Clear calendar cache
+      if (window.clearCalendarCache) {
+        window.clearCalendarCache();
+      }
+      
       showToast('Booking cancelled successfully', 'success');
       location.reload();
     } catch (error) {
       console.error('Failed to cancel booking:', error);
       showToast('Failed to cancel booking', 'error');
+    }
+  };
+
+  // Edit booking function
+  window.kinaEditBooking = async (bookingId) => {
+    const booking = allBookings.find(b => b.id === bookingId);
+    if (!booking) {
+      showToast('Booking not found', 'error');
+      return;
+    }
+    
+    console.log('[Edit] Preparing to edit booking:', booking);
+    
+    // Extract booking items
+    const bookingItems = booking.booking_items || [];
+    const rooms = bookingItems.filter(item => item.item_type === 'room');
+    const cottages = bookingItems.filter(item => item.item_type === 'cottage');
+    
+    // Prepare pre-fill data
+    // Extract guest info - check multiple possible fields
+    const guestName = booking.guest_name || booking.guests?.name || userName;
+    const guestEmail = booking.guest_email || booking.guests?.email || authState.user?.email || '';
+    const guestContact = booking.contact_number || booking.contact || '';
+    
+    const preFillData = {
+      checkIn: booking.check_in,
+      checkOut: booking.check_out,
+      selectedRooms: rooms.map(r => r.item_id),
+      selectedCottages: cottages.map(c => c.item_id),
+      guestInfo: {
+        name: guestName,
+        email: guestEmail,
+        contact: guestContact
+      },
+      paymentMode: booking.payment_mode,
+      perRoomGuests: rooms.map(r => ({
+        roomId: r.item_id,
+        guestName: r.guest_name || guestName,
+        adults: r.adults || 1,
+        children: r.children || 0
+      })),
+      guests: booking.guests
+    };
+    
+    console.log('[Edit] Pre-fill data:', preFillData);
+    
+    // Determine reservation type
+    let reservationType = 'room';
+    if (cottages.length > 0 && rooms.length === 0) {
+      reservationType = 'cottage';
+    } else if (booking.packages?.category === 'function-halls') {
+      reservationType = 'function-hall';
+    }
+    
+    // Open booking modal in edit mode
+    if (window.openBookingModal) {
+      const { openBookingModal } = await import('../components/bookingModal.js');
+      openBookingModal(
+        reservationType,
+        booking.packages?.title || 'Booking',
+        preFillData,
+        true,  // editMode
+        bookingId
+      );
+    } else {
+      showToast('Booking modal not available', 'error');
     }
   };
 
@@ -234,9 +306,11 @@ export async function MyBookingsPage() {
         <td><span class="booking-status-badge ${statusClass}">${booking.status}</span></td>
         ${showActions ? `
           <td class="booking-actions">
-            <button class="btn small" onclick="kinaViewBookingDetails(${booking.id})">View</button>
             ${(booking.status === 'confirmed' || booking.status === 'pending') && new Date(booking.check_in) > new Date() ? 
-              `<button class="btn small danger" onclick="kinaCancelBooking(${booking.id})">Cancel</button>` : ''
+              `<button class="btn small danger" onclick="kinaCancelBooking('${booking.id}')">Cancel</button>` : ''
+            }
+            ${(booking.status === 'confirmed' || booking.status === 'pending') && new Date(booking.check_in) > new Date() ? 
+              `<button class="btn small btn-edit" onclick="kinaEditBooking('${booking.id}')">Re-Edit</button>` : ''
             }
           </td>
         ` : ''}
@@ -430,6 +504,21 @@ export async function MyBookingsPage() {
 
       .btn.danger:hover {
         background: #c82333;
+      }
+
+      .btn-edit {
+        background: #4CAF50;
+        color: white;
+        border: none;
+      }
+
+      .btn-edit:hover {
+        background: #45a049;
+      }
+
+      .btn-edit:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
       }
 
       .bookings-empty-state {
