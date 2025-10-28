@@ -13,10 +13,12 @@ export async function MyBookingsPage() {
 
   const userName = `${authState.user?.firstName || ''} ${authState.user?.lastName || ''}`.trim() || 'Guest';
 
-  // Fetch bookings from Supabase
+  // Fetch bookings from API or localStorage
   let allBookings = [];
   try {
-    allBookings = await fetchUserBookings();
+    const result = await fetchUserBookings();
+    // Handle both API response format and direct array
+    allBookings = result?.data || result || [];
   } catch (error) {
     console.error('Failed to fetch bookings:', error);
     showToast('Failed to load bookings', 'error');

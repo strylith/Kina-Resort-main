@@ -3,9 +3,10 @@
 // Check if we're NOT on localhost (production environment)
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 
-// Use mock API for bookings when in development (no auth required)
-// Keep regular API for auth/packages/settings (which work with mock DB)
-const USE_MOCK_BOOKINGS = !isProduction; // Use mock bookings in development
+// Use localStorage for bookings when in production (client-side only)
+// Use mock API for bookings when in development
+const USE_CLIENT_STORAGE = isProduction; // Use localStorage in production
+const USE_MOCK_BOOKINGS = !isProduction; // Use mock API in development
 
 const API_BASE = isProduction 
   ? 'https://kina-resort-main-production.up.railway.app/api'
@@ -18,6 +19,7 @@ console.log('🌐 API Configuration:');
 console.log('  Location:', window.location.href);
 console.log('  Hostname:', window.location.hostname);
 console.log('  Is Production:', isProduction);
+console.log('  Using Client Storage:', USE_CLIENT_STORAGE);
 console.log('  Using Mock Bookings:', USE_MOCK_BOOKINGS);
 console.log('  API_BASE:', API_BASE);
 console.log('  MOCK_API_BASE:', MOCK_API_BASE);
@@ -157,12 +159,25 @@ export async function getCurrentUser() {
 
 // Packages API
 export async function fetchPackages(category = '') {
+  // Use localStorage in production
+  if (USE_CLIENT_STORAGE) {
+    const { getAllPackages, getPackagesByCategory } = await import('./localStorage.js');
+    const packages = category ? getPackagesByCategory(category) : getAllPackages();
+    return packages;
+  }
+  
   const endpoint = category ? `/packages?category=${category}` : '/packages';
   const data = await apiRequest(endpoint);
   return data.data || [];
 }
 
 export async function fetchPackage(id) {
+  // Use localStorage in production
+  if (USE_CLIENT_STORAGE) {
+    const { getPackageById } = await import('./localStorage.js');
+    return getPackageById(id);
+  }
+  
   const data = await apiRequest(`/packages/${id}`);
   return data.data;
 }
@@ -176,17 +191,21 @@ export async function fetchPackageAvailability(packageId, startDate, endDate) {
 
 // Check booking availability (conditionally routed)
 export async function checkAvailability(packageId, checkIn, checkOut, category = null) {
-  let url = `/bookings/availability/${packageId}?checkIn=${checkIn}&checkOut=${checkOut}`;
-  if (category) {
-    url += `&category=${category}`;
+  // Use localStorage in production
+  if (USE_CLIENT_STORAGE) {
+    console.log('[ClientStorage] Checking availability via localStorage...');
+    const { checkAvailability: checkStorageAvailability } = await import('./localStorage.js');
+    return checkStorageAvailability(packageId, checkIn, checkOut, category);
   }
   
   // Use mock API in development mode
   if (USE_MOCK_BOOKINGS) {
     console.log('[MockDB] Checking availability via mock API...');
+    const url = `/bookings/availability/${packageId}?checkIn=${checkIn}&checkOut=${checkOut}${category ? `&category=${category}` : ''}`;
     const data = await mockApiRequest(url, { method: 'GET' });
     return data;
   } else {
+    const url = `/bookings/availability/${packageId}?checkIn=${checkIn}&checkOut=${checkOut}${category ? `&category=${category}` : ''}`;
     const data = await apiRequest(url, { method: 'GET' });
     return data;
   }
@@ -221,6 +240,19 @@ async function mockApiRequest(endpoint, options = {}) {
 
 // Bookings API
 export async function fetchUserBookings() {
+  // Use localStorage in production
+  if (USE_CLIENT_STORAGE) {
+    console.log('[ClientStorage] Fetching user bookings from localStorage...');
+    const { getAllBookings, getBookingsByUserId } = await import('./localStorage.js');
+    const currentUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+    const allBookings = getAllBookings();
+    // Filter by current user if logged in, otherwise return all (for demo)
+    const userBookings = currentUser.id 
+      ? getBookingsByUserId(currentUser.id)
+      : allBookings;
+    return { success: true, data: userBookings };
+  }
+  
   if (USE_MOCK_BOOKINGS) {
     console.log('[MockDB] Fetching user bookings from mock API...');
     const data = await mockApiRequest('/bookings');
@@ -232,6 +264,18 @@ export async function fetchUserBookings() {
 }
 
 export async function createBooking(bookingData) {
+  // Use localStorage in production
+  if (USE_CLIENT_STORAGE) {
+    console.log('[ClientStorage] Creating booking in localStorage...');
+    const { createBooking: createStorageBooking } = await import('./localStorage.js');
+    const currentUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+    const booking = createStorageBooking({
+      ...bookingData,
+      userId: currentUser.id || 'guest-' + Date.now()
+    });
+    return { success: true, data: booking };
+  }
+  
   const data = await apiRequest('/bookings', {
     method: 'POST',
     body: JSON.stringify({
@@ -245,6 +289,14 @@ export async function createBooking(bookingData) {
 }
 
 export async function updateBooking(bookingId, updates) {
+  // Use localStorage in production
+  if (USE_CLIENT_STORAGE) {
+    console.log('[ClientStorage] Updating booking in localStorage...');
+    const { updateBooking: updateStorageBooking } = await import('./localStorage.js');
+    const updated = updateStorageBooking(bookingId, updates);
+    return { success: true, data: updated };
+  }
+  
   if (USE_MOCK_BOOKINGS) {
     console.log('[MockDB] Updating booking via mock API...');
     const data = await mockApiRequest(`/bookings/${bookingId}`, {
@@ -262,6 +314,14 @@ export async function updateBooking(bookingId, updates) {
 }
 
 export async function cancelBooking(bookingId) {
+  // Use localStorage in production
+  if (USE_CLIENT_STORAGE) {
+    console.log('[ClientStorage] Cancelling booking in localStorage...');
+    const { cancelBooking: cancelStorageBooking } = await import('./localStorage.js');
+    cancelStorageBooking(bookingId);
+    return { success: true, message: 'Booking cancelled successfully' };
+  }
+  
   if (USE_MOCK_BOOKINGS) {
     console.log('[MockDB] Cancelling booking via mock API...');
     const data = await mockApiRequest(`/bookings/${bookingId}`, {
